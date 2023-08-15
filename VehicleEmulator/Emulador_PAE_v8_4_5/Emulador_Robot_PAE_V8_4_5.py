@@ -64,11 +64,11 @@ if plataforma == "Linux":  # p. ej. Ubuntu y derivados
 elif plataforma == "Darwin":  # mac
     Default_port_com = '/dev/cu.usbmodemM43210051'  # Es pot editar
 else:  # Windows
-    Default_port_com = 'COM7'  # Es pot editar
+    Default_port_com = 'COM5'  # Es pot editar
 
 # Posició inicial del robot: (les unitats de distància es consideren en mm)
-INITIAL_POS_X = 2000  # Es pot editar
-INITIAL_POS_Y = 2000  # Es pot editar
+INITIAL_POS_X = 40  # Es pot editar
+INITIAL_POS_Y = 350  # Es pot editar
 INITIAL_POS_THETA = math.pi / 2  # Orientació inicial: segons eix Y+. #  Es pot editar
 # Paràmetres de la simulació:
 MAX_SIM_STEPS = 12000  # Nombre màxim de pasos d'una simulació. Es pot editar
