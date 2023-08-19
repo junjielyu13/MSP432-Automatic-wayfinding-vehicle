@@ -6,6 +6,78 @@
 #include <rxReturn.h>
 #include <uart.h>
 
+#define LED_V_BIT BIT0
+#define LED_RGB_R BIT0
+#define LED_RGB_G BIT1
+#define LED_RGB_B BIT2
+#define BOOSTERPACK_LED_RGB_R BIT6
+#define BOOSTERPACK_LED_RGB_G BIT4
+#define BOOSTERPACK_LED_RGB_B BIT6
+
+#define SW1_POS 1
+#define SW2_POS 4
+#define SW1_INT 0x04
+#define SW2_INT 0x0A
+#define JUP_INT 0x0C
+#define JDOWN_INT 0x0A
+#define JLEFT_INT 0x0C
+#define JRIGHT_INT 0x10
+#define JCENTER_INT 0x04
+#define SW1_BIT BIT(SW1_POS)
+#define SW2_BIT BIT(SW2_POS)
+
+typedef struct
+{
+    bool r, g, b;
+    uint8_t time;
+} color_t;
+
+color_t color_sequence[] = { { .r = true, .g = false, .b = false, .time = 2 }, // Vermell 2 segons
+                             { .r = true, .g = true, .b = false, .time = 1 },  // Groc 1 segons
+                             { .r = false, .g = true, .b = false, .time = 3 },  // Verd 3 segons
+                             { .r = false, .g = false, .b = true, .time = 2 },  // Blau 2 segons
+                             { .r = true, .g = true, .b = true, .time = 1 },  // Blanc 1 segons
+        };
+
+int8_t color_sequence_Size = sizeof(color_sequence) / sizeof(color_sequence[0]);
+
+
+void config_RGB_LEDS(void)
+{
+    //port.pin dels LEDs RGB als recursos del boosterpack:
+    //LEDs RGB = P2.6, P2.4, P5.6
+    P2SEL0 &= ~(BIT4 + BIT6 );    //P2.4, P2.6, son GPIOs
+    P2SEL1 &= ~(BIT4 + BIT6 );    //P2.4, P2.6, son GPIOs
+    P2DIR |= (BIT4 + BIT6 );      //Els LEDs son sortides
+    P2OUT &= ~(BIT4 + BIT6 );     //El seu estat inicial sera apagat
+
+    P5SEL0 &= ~(BIT6 );    //P5.6 son GPIOs
+    P5SEL1 &= ~(BIT6 );    //P5.6 son GPIOs
+    P5DIR |= (BIT6 );      //Els LEDs son sortides
+    P5OUT &= ~(BIT6 );     //El seu estat inicial sera apagat
+
+    //borrar tot a baix
+    //**********************************************************************************************************
+    //port.pin dels LEDs RGB als recursos de la placa msp432
+    //
+    //Si no se puede usar els RGB del boosterpack, use els RGB de la placa!!!!
+    //
+    //LED Rojo de placa sota
+    /*
+    P1SEL0 &= ~(BIT0 );    //P2.0, P2.1, P2.2 son GPIOs
+    P1SEL1 &= ~(BIT0 );    //P2.0, P2.1, P2.2 son GPIOs
+    P1DIR |= (BIT0 );      //Els LEDs son sortides
+    P1OUT &= ~(BIT0 );     //El seu estat inicial sera apagat
+    // /LED RGB de placa sota
+    P2SEL0 &= ~(BIT0 + BIT1 + BIT2 );   // Los LEDs RGB son GPIOs
+    P2SEL1 &= ~(BIT0 + BIT1 + BIT2 );   // Los LEDs RGB son GPIOs
+    P2DIR |= (BIT0 + BIT1 + BIT2 );      // Un LED es una salida
+    P2OUT &= ~(BIT0 + BIT1 + BIT2 ); // El estado inicial de los LEDs RGB es apagado
+    */
+    //***********************************************************************************************************
+
+}
+
 #define BUTTON_S1       1
 #define BUTTON_S2       2
 #define JOYSTICK_LEFT   3
@@ -59,15 +131,19 @@ void init_interrupciones(void)
     // Timer A0
     NVIC->ICPR[0] |= BIT8;  //Primero, me aseguro de que no quede ninguna interrupcion residual pendiente para este puerto,
     NVIC->ISER[0] |= BIT8;  //y habilito las interrupciones del puerto
+    NVIC->ICPR[0] |= BIT9;  //Primero, me aseguro de que no quede ninguna interrupcion residual pendiente para este puerto,
+    NVIC->ISER[0] |= BIT9;  //y habilito las interrupciones del puerto
+
     // Timer A1
     NVIC->ICPR[0] |= BITA;  //Primero, me aseguro de que no quede ninguna interrupcion residual pendiente para este puerto,
     NVIC->ISER[0] |= BITA;  //y habilito las interrupciones del puerto
-
-    NVIC->ICPR[0] |= 0x40000;
-    NVIC->ISER[0] |= 0x40000;
+    NVIC->ICPR[0] |= BITB; //Primero, me aseguro de que no quede ninguna interrupcion residual pendiente para este puerto,
+    NVIC->ISER[0] |= BITB; //y habilito las interrupciones del puerto
 
     __enable_interrupt(); //Habilitamos las interrupciones a nivel global del micro.
 }
+
+
 
 
 //Configuramos botones
@@ -77,6 +153,7 @@ void init_botons(void)
     P3SEL0 &= ~BIT5;                    //Els polsadors son GPIOs
     P3SEL1 &= ~BIT5;                    //Els polsadors son GPIOs
     P3DIR &= ~(BIT5 );                  //Un polsador es una entrada
+    P3OUT |= (BIT5 );                   //Donat que l'altra costat es GND, volem una pull-up
     P3IE |= (BIT5 );                    //Interrupcions activades
     P3IES &= ~(BIT5 );                  //amb transicio L->H
     P3IFG = 0;                          //Netegem les interrupcions anteriors
@@ -99,6 +176,7 @@ void init_botons(void)
     P5SEL0 &= ~(BIT1 + BIT4 + BIT5 );   //Els polsadors son GPIOs
     P5SEL1 &= ~(BIT1 +BIT4 + BIT5 );    //Els polsadors son GPIOs
     P5DIR &= ~(BIT1 + BIT4 + BIT5 );    //Un polsador es una entrada
+    P5OUT |= (BIT1 + BIT4 + BIT5 );     //Donat que l'altra costat es GND, volem una pull-up
     P5IE |= (BIT1 + BIT4 + BIT5 );      //Interrupcions activades
     P5IES &= ~(BIT1 + BIT4 + BIT5 );    //amb transicio L->H
     P5IFG = 0;                          //Netegem les interrupcions anteriors
@@ -117,6 +195,7 @@ void main(void)
     init_UART();                //Configuramos la UART
     init_botons();              //Configuramos los botons
     init_interrupciones();      //Configuramos las interrupciones.
+    config_RGB_LEDS();
 
     stop();
 
@@ -152,6 +231,132 @@ void main(void)
     while (1);
 }
 
+
+volatile uint8_t limitador = 50;
+volatile uint8_t step = 10;
+#define CNT_MAX 100
+volatile int8_t pwm_duty = 50;
+
+void TA0_0_IRQHandler(void)
+{
+    static uint8_t cnt = 0;
+
+    TA0CCTL0 &= ~TIMER_A_CCTLN_CCIE;  //Conviene inhabilitar la interrupción al principio
+    TA0CCTL0 &= ~TIMER_A_CCTLN_CCIFG; //Clear interrupt flag
+
+
+
+    //Si boosterpack no funciona, use este
+    //Recuerde activar el código inferior en config_RGB_LEDS
+    //este es sirve para controlar la luminosidad de la placa LED1 P1.0:
+    /*
+    if (cnt == CNT_MAX){
+        //Encendemos el LED Rojo
+        if(limitador != 0){ //Si el limitador es igual 0 es para mantener las luces apagadas
+            P1OUT |= LED_V_BIT;
+        }
+        cnt = 0;
+    }else if (cnt >= limitador){ //Mayor que limitador es significa apagar las luces
+        //Apagamos el LED Rojo
+        P1OUT &= ~LED_V_BIT;
+    }else if (cnt < limitador){ //Menor que limitador es significa encendemos las luces
+        //Encendemos el LED Rojo
+        P1OUT |= LED_V_BIT;
+    }
+    */
+
+    //este es sirve para controlar la luminosidad de la boosterpack RGB:
+    ///*
+    if (cnt == CNT_MAX){
+        //Encendemos el LED rojo
+        if(limitador != 0){ //Si el limitador es igual 0 es para mantener las luces apagadas
+            P2OUT |= BOOSTERPACK_LED_RGB_R;
+        }
+        cnt = 0;
+    }else if (cnt >= limitador){ //Mayor que limitador es significa apagar las luces
+        //Apagamos el LED rojo
+        P2OUT &= ~(BOOSTERPACK_LED_RGB_R);
+    }else if (cnt < limitador){ //Menor que limitador es significa encendemos las luces
+        //Encendemos el LED rojo
+        P2OUT |= BOOSTERPACK_LED_RGB_R;
+    }
+    //*/
+
+    cnt++;
+
+    TA0CCTL0 |= TIMER_A_CCTLN_CCIE; //Se debe habilitar la interrupción antes de salir
+}
+
+int8_t INDEX = -1;  //estat inicial
+uint8_t TIMEPS = 0; //temps inicial
+
+void TA1_0_IRQHandler(void){
+
+    TA1CCTL0 &= ~TIMER_A_CCTLN_CCIE;  //Conviene inhabilitar la interrupción al principio
+    TA1CCTL0 &= ~TIMER_A_CCTLN_CCIFG; //Clear interrupt flag
+
+    TIMEPS++;
+
+    if (INDEX == -1 || TIMEPS == color_sequence[INDEX].time){ //Estado inicial o después de completar el último tiempo de luz
+        INDEX++;
+
+        if (INDEX == color_sequence_Size){ //Evitar overflow del color sequence
+            INDEX = 0;
+        }
+
+        TIMEPS = 0;
+
+
+        //Si boosterpack no funciona, use este
+        //este es sirve para controlar la luminosidad de la placa LED1 P1.0:
+        //Recuerde activar el código inferior en config_RGB_LEDS
+        /*
+        if (color_sequence[INDEX].r == true){   //Encendemos el RGB Rojo
+            P2OUT |= LED_RGB_R;
+        }else{                                  //Apagamos el RGB Rojo
+            P2OUT &= ~(LED_RGB_R);
+        }
+
+        if (color_sequence[INDEX].g == true){   //Encendemos el RGB amarillo
+            P2OUT |= LED_RGB_G;
+        }else{                                  //Apagamos el RGB amarillo
+            P2OUT &= ~(LED_RGB_G);
+        }
+
+        if (color_sequence[INDEX].b == true){   //Encendemos el RGB azul
+            P2OUT |= LED_RGB_B;
+        }else{                                  //Apagamos el RGB azul
+            P2OUT &= ~(LED_RGB_B);
+        }
+        */
+
+
+
+        //este es sirve para controlar la luminosidad de la boosterpack RGB:
+        ///*
+        if (color_sequence[INDEX].r == true){   //Encendemos el RGB Rojo
+            P2OUT |= BOOSTERPACK_LED_RGB_R;
+        }else{                                  //Apagamos el RGB Rojo
+            P2OUT &= ~(BOOSTERPACK_LED_RGB_R);
+        }
+
+        if (color_sequence[INDEX].g == true){   //Encendemos el RGB amarillo
+            P2OUT |= BOOSTERPACK_LED_RGB_G;
+        }else{                                  //Apagamos el RGB amarillo
+            P2OUT &= ~(BOOSTERPACK_LED_RGB_G);
+        }
+
+        if (color_sequence[INDEX].b == true){   //Encendemos el RGB azul
+            P5OUT |= BOOSTERPACK_LED_RGB_B;
+        }else{                                  //Apagamos el RGB azul
+            P5OUT &= ~(BOOSTERPACK_LED_RGB_B);
+        }
+        //*/
+    }
+
+    TA1CCTL0 |= TIMER_A_CCTLN_CCIE; //Se debe habilitar la interrupción antes de salir
+}
+
 //ISR para las interrupciones del puerto 3
 void PORT3_IRQHandler(void)
 {
@@ -176,9 +381,11 @@ void PORT4_IRQHandler(void)
     {
     case 0x0C:
         estado = JOYSTICK_RIGHT;
+        step += 5;      //Joystic dreta: la quantitat step és veu incrementada en 5.
         break;
     case 0x10:
         estado = JOYSTICK_LEFT;
+        step -= 5;      //Joystick esquerra: la quantitat step és veu decrementada en 5.
         break;
     case 0x04:
         estado = JOYSTICK_CENTER;
@@ -203,9 +410,11 @@ void PORT5_IRQHandler(void)
         break;
     case 0x0A:
         estado = JOYSTICK_UP;
+        limitador += step;      //Joystick amunt: increment d’aquest valor en una quantitat step
         break;
     case 0x0C:
         estado = JOYSTICK_DOWN;
+        limitador -= step;      //Joystick avall: decrement d’aquest valor en una quantitat step
         break;
     default:
         break;

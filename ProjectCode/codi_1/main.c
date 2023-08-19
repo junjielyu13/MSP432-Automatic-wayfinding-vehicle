@@ -124,11 +124,7 @@ void init_interrupciones()
 void init_botons(void)
 {
     //Configuramos botones
-zº
-    P5SEL0 &= ~(BIT1 + BIT4 + BIT5 );    //Els polsadors son GPIOs
-    P5SEL1 &= ~(BIT1 + BIT4 + BIT5 );    //Els polsadors son GPIOs
     P1SEL0 &= ~(BIT5 );                  //Els polsadors son GPIOs
-    P3SEL1 &= ~(BIT5 );                  //Els polsadors son GPIOs
 
     //P4.1 Joystick Centre
     //P4.5 Joystick Esquerra
@@ -143,6 +139,8 @@ zº
     //P5.1 Polsador S1
     //P5.4 Joystick Amunt
     //P5.5 Joystick Aval
+    P5SEL1 &= ~(BIT1 + BIT4 + BIT5 );    //Els polsadors son GPIOs
+    P5SEL0 &= ~(BIT1 + BIT4 + BIT5 );    //Els polsadors son GPIOs
     P5DIR &= ~(BIT1 + BIT4 + BIT5 );    //Un polsador es una entrada
     P5REN |= (BIT1 + BIT4 + BIT5 );     //Pull-up/pull-down pel pulsador
     P5OUT |= (BIT1 + BIT4 + BIT5 );     //Donat que l'altra costat es GND, volem una pull-up
@@ -151,6 +149,7 @@ zº
     P5IFG = 0;                          //Netegem les interrupcions anteriors
 
     //P3.5 Polsador S2
+    P3SEL1 &= ~(BIT5 );                  //Els polsadors son GPIOs
     P3DIR &= ~(BIT5 );                  //Un polsador es una entrada
     P3REN |= (BIT5 );                   //Pull-up/pull-down pel pulsador
     P3OUT |= (BIT5 );                   //Donat que l'altra costat es GND, volem una pull-up
