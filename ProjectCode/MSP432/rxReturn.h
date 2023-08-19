@@ -1,5 +1,5 @@
-#ifndef HELPER_H_
-#define HELPER_H_
+#ifndef RXRETURN_H_
+#define RXRETURN_H_
 
 typedef uint8_t byte;
 typedef int BOOL;
@@ -10,4 +10,4 @@ typedef struct RxReturn{
     BOOL error;
 } RxReturn;
 
-#endif /* HELPER_H_ */
+#endif /* RXRETURN_H_ */

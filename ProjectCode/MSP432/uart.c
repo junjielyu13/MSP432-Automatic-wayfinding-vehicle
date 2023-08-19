@@ -3,60 +3,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <config.h>
+#include <init.h>
 #include <rxReturn.h>
+#include <utils.h>
 
 
-#define false       0
-#define true        1
-#define TXD2_READY (UCA2IFG & UCTXIFG)
-#define WRITE_DATA  0x03
-#define READ_DATA   0x02
-#define LEFT        0
-#define RIGHT       1
-#define LEFT_MOTOR  3
-#define RIGHT_MOTOR 2
-#define SPEED_LOW   0x20
-#define SPEED_HIGH  0x21
-
-uint32_t current_time = 0;
-byte Byte_Recibido;
-byte DatoLeido_UART;
-
-// Función time_out es True si el tiempo del contador (current_time) supera el tiempo que hemos pasado como parámetro (time)
-bool time_out(int time){
-    return (current_time>=time);
-}
-
-
-void init_UART(void)
-{
-    UCA2CTLW0 |= UCSWRST;           //Fem un reset de la USCI, desactiva la USCI
-    UCA2CTLW0 |= UCSSEL__SMCLK;     //UCSYNC=0 mode asé”Ÿçµ¥cron
-                                    //UCMODEx=0 seleccionem mode UART
-                                    //UCSPB=0 nomes 1 stop bit
-                                    //UC7BIT=0 8 bits de dades
-                                    //UCMSB=0 bit de menys pes primer
-                                    //UCPAR=x ja que no es fa servir bit de paritat
-                                    //UCPEN=0 sense bit de paritat
-                                    //Triem SMCLK (24MHz) com a font del clock BRCLK
-
-    UCA2MCTLW = UCOS16;             // Necessitem sobre-mostreig => bit 0 = UCOS16 = 1
-    UCA2BRW = 3;                    //Prescaler de BRCLK fixat a 13. Com SMCLK va a24MHz,
-                                    //volem un baud rate de 115200kb/s i fem sobre-mostreig de 16
-                                    //el rellotge de la UART ha de ser de ~1.85MHz (24MHz/13).
-
-    //Configurem els pins de la UART
-    P3SEL0 |= BIT2 | BIT3;          //I/O funci¨®: P1.3 = UART0TX, P1.2 = UART0RX
-    P3SEL1 &= ~ (BIT2 | BIT3);
-    P3SEL0 &= ~BIT0;
-    P3SEL1 &= ~BIT0;
-    P3DIR |= BIT0;
-    P3OUT &= ~BIT0;
-
-    UCA2CTLW0 &= ~UCSWRST;          //Reactivem la l¨ªnia de comunicacions s¨¨rie
-    EUSCI_A0->IFG &= ~EUSCI_A_IFG_RXIFG; // Clear eUSCI RX interrupt flag
-
-}
 
 /* funcions per canviar el sentit de les comunicacions */
 void sentit_dades_Rx(void)

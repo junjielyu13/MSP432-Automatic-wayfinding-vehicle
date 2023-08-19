@@ -1,10 +1,3 @@
-/*
- * lcd.h
- *
- *  Created on: Jul 12, 2013
- *      Author: RobG
- *  Adaptacion C. Serre, UB, 2015
- */
 #ifndef lib_PAE_LCD_H_
 #define lib_PAE_LCD_H_
 
@@ -73,7 +66,7 @@ extern uint16_t Color_Texto_Inv;
 #define FONT_MD_BKG	4
 #define FONT_LG_BKG	5
 //Medidas pantalla:
-//con fuente pequeña: 21 caracteres
+//con fuente pequeï¿½a: 21 caracteres
 //con fuente mediana: 15 "y pico" carateres, es decir se queda en 15.
 //con fuente grande:  10 "y pico" caracteres, pero salen bastante mal. fuente desaconsejada.
 
