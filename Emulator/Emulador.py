@@ -474,17 +474,17 @@ def robot_status():
     sentit_right = AX12[MOTOR_ID_R - 1][0x21] & 0x04
     if (v_left == 0) and (v_right == 0):
         if DEBUG_Consola == 1:
-            print("Robot Parat")
-        ESTAT_ROBOT = "Robot Parat"
+            print("Robot STOP")
+        ESTAT_ROBOT = "Robot STOP"
     elif sentit_left == sentit_right:
         if sentit_left == CW:
             if DEBUG_Consola == 1:
-                print("Robot Gira Esquerra")
-            ESTAT_ROBOT = "Robot Gira Esquerra"
+                print("Robot Gira Left")
+            ESTAT_ROBOT = "Robot Gira Left"
         else:
             if DEBUG_Consola == 1:
-                print("Robot Gira Dreta")
-            ESTAT_ROBOT = "Robot Gira Dreta"
+                print("Robot Gira Right")
+            ESTAT_ROBOT = "Robot Gira Right"
     elif abs(v_left - v_right) < 1:
         if sentit_left == CW:
             if DEBUG_Consola == 1:
@@ -497,20 +497,20 @@ def robot_status():
     elif v_left > v_right:
         if sentit_left == CW:
             if DEBUG_Consola == 1:
-                print("Robot Gira Esquerra")
-            ESTAT_ROBOT = "Robot Gira Esquerra"
+                print("Robot Gira Left")
+            ESTAT_ROBOT = "Robot Gira Left"
         else:
             if DEBUG_Consola == 1:
-                print("Robot Gira Dreta")
-            ESTAT_ROBOT = "Robot Gira Dreta"
+                print("Robot Gira Right")
+            ESTAT_ROBOT = "Robot Gira Right"
     elif sentit_left == CW:
         if DEBUG_Consola == 1:
-            print("Robot Gira Dreta")
-        ESTAT_ROBOT = "Robot Gira Dreta"
+            print("Robot Gira Right")
+        ESTAT_ROBOT = "Robot Gira Right"
     else:
         if DEBUG_Consola == 1:
-            print("Robot Gira Esquerra")
-        ESTAT_ROBOT = "Robot Gira Esquerra"
+            print("Robot Gira Left")
+        ESTAT_ROBOT = "Robot Gira Left"
     return
 
 
@@ -581,8 +581,8 @@ class Hilo(threading.Thread):
         global AX12_moving_R
         global lectura
         Lista_acciones = []
-        AX12_moving_L = "PARAT"
-        AX12_moving_R = "PARAT"
+        AX12_moving_L = "STOP"
+        AX12_moving_R = "STOP"
         print("Lectura puerto iniciada...", instruccio)
         while instruccio != INSTR_END:
             if not la_cola.empty():
@@ -1112,7 +1112,7 @@ class Application(tk.Frame):
         self.Label_Debug.grid(row=1, column=1, sticky=W)
 
         self.Debug_frame = Checkbutton(self, variable=DEBUG_trama_check)
-        self.Debug_frame["text"] = "Debug Trames"
+        self.Debug_frame["text"] = "Debug Frames"
         self.Debug_frame["fg"] = "blue"
         self.Debug_frame["command"] = self.set_debug_frames
         self.Debug_frame.grid(row=1, column=2, sticky=W)
@@ -1130,10 +1130,10 @@ class Application(tk.Frame):
         self.Debug_consola.grid(row=1, column=4, sticky=E)
 
         self.Print_Memoria_AX = Button(
-            self, text="Imprimir Memoria Mòduls", fg="blue", command=self.imprimir_AX_memory)
+            self, text="Print Memory Modules", fg="blue", command=self.imprimir_AX_memory)
         self.Print_Memoria_AX.grid(row=2, column=2, columnspan=2, sticky=W)
 
-        self.Label_Simul = Label(self, text="SIMULACIO:")
+        self.Label_Simul = Label(self, text="SIMULATION:")
         self.Label_Simul.grid(row=3, column=1, sticky=W)
 
         try:
@@ -1150,7 +1150,7 @@ class Application(tk.Frame):
 
         self.Simul_grabar = Checkbutton(
             self, fg="blue", variable=SIMUL_Save_check)
-        self.Simul_grabar["text"] = "Desar"
+        self.Simul_grabar["text"] = "Save"
         self.Simul_grabar["command"] = self.grabar_Simul_OnOff
         self.Simul_grabar.grid(row=3, column=3)
 
@@ -1163,31 +1163,31 @@ class Application(tk.Frame):
                 self, text="Reset", compound='left', fg="blue", command=self.reset_simul)
         self.Simul_reset.grid(row=3, column=4, sticky=W)
 
-        self.label_robot = Label(self, text="ESTAT ROBOT:")
+        self.label_robot = Label(self, text="ROBOT STATE:")
         self.label_robot.grid(row=4, column=1, sticky=W)
         self.label_trama = Label(self, textvariable=texto_trama)
-        texto_trama.set("ROBOT PARAT")
+        texto_trama.set("ROBOT STOP")
         self.label_trama.grid(row=4, column=2, columnspan=2, sticky=W)
 
-        self.label_AX12_L = Label(self, text="MOTOR Esq.:")
+        self.label_AX12_L = Label(self, text="MOTOR Left.:")
         self.label_AX12_L.grid(row=5, column=1)
         self.label_motor_left = Label(self, textvariable=texto_motor_left)
-        texto_motor_left.set("PARAT")
+        texto_motor_left.set("STOP")
         self.label_motor_left.grid(row=5, column=2)
-        self.label_AX12_R = Label(self, text="MOTOR Dret:")
+        self.label_AX12_R = Label(self, text="MOTOR Right:")
         self.label_AX12_R.grid(row=6, column=1)
         self.label_motor_right = Label(self, textvariable=texto_motor_right)
-        texto_motor_right.set("PARAT")
+        texto_motor_right.set("STOP")
         self.label_motor_right.grid(row=6, column=2)
 
-        self.led_motor_left = Radiobutton(self, text="Led Esq.", value=1,
+        self.led_motor_left = Radiobutton(self, text="Led Left.", value=1,
                                           variable=Led_motor_left, state=DISABLED)
         self.led_motor_left.grid(row=5, column=3)
-        self.led_motor_right = Radiobutton(self, text="Led Dret", value=1,
+        self.led_motor_right = Radiobutton(self, text="Led Right", value=1,
                                            variable=Led_motor_right, state=DISABLED)
         self.led_motor_right.grid(row=6, column=3)
 
-        self.label_izq = Label(self, text="IR Esq.")
+        self.label_izq = Label(self, text="IR Left.")
         self.label_izq.grid(row=7, column=1)
         self.progress_bar_izq = ttk.Progressbar(self, orient="horizontal",
                                                 length=255, maximum=255,
@@ -1199,7 +1199,7 @@ class Application(tk.Frame):
         self.label_valor_izq = Label(self, textvariable=valor_barra_izq)
         self.label_valor_izq.grid(row=7, column=5, sticky=W)
 
-        self.label_der = Label(self, text="IR Dret")
+        self.label_der = Label(self, text="IR Right")
         self.label_der.grid(row=8, column=1)
         self.progress_bar_der = ttk.Progressbar(self, orient="horizontal",
                                                 length=255, maximum=255,
@@ -1223,7 +1223,7 @@ class Application(tk.Frame):
         self.label_valor_centro = Label(self, textvariable=valor_barra_cent)
         self.label_valor_centro.grid(row=9, column=5, sticky=W)
 
-        self.quit = tk.Button(self, text="SORTIR",
+        self.quit = tk.Button(self, text="EXIT",
                               fg="red", command=self.salir)
         self.quit.grid(row=21, column=4)
 
@@ -1249,7 +1249,7 @@ class Application(tk.Frame):
 
         self.refrescar = tk.Button(
             self, command=lambda: refrescar_puertos(self.cb))
-        self.refrescar["text"] = "Refrescar"
+        self.refrescar["text"] = "Refresh"
         self.refrescar["fg"] = "blue"
         self.refrescar.grid(row=21, column=3, sticky=W)
 
@@ -1300,7 +1300,7 @@ class Application(tk.Frame):
         self.tooltip_refrescar.bind(self.refrescar, el_tip)
 
         self.tooltip_quit = Pmw.Balloon(root)
-        el_tip = "surt de l’emulador, tancant totes les finestres, i terminant tots els fils i processos. \n(Nota: la creueta de la part superior dreta de la finestra no surt de forma neta)"
+        el_tip = "surt de l’emulador, tancant totes les finestres, i terminant tots els fils i processos. \n(Nota: la creueta de la part superior Right de la finestra no surt de forma neta)"
         self.tooltip_quit.bind(self.quit, el_tip)
 
     def on_select(self, event=None):
@@ -1356,7 +1356,7 @@ class Application(tk.Frame):
     def imprimir_IR(self):
         valores_sensores = AX12[SENSOR_ID -
                                 1][DYN_REG__IR_LEFT:DYN_REG__IR_LEFT + 3]
-        print("Sensors Esq., Centre, Dret: ", valores_sensores)
+        print("Sensors Left., Centre, Right: ", valores_sensores)
 
     def set_Simul_On_Off(self):
         global simulando, SIMUL_On_Off
@@ -1451,7 +1451,7 @@ class Application(tk.Frame):
 
 
 lista_puertos = puertos_serie()
-root.title("EMULADOR ROBOT PAE")
+root.title("EMULADOR ROBOT")
 app = Application(master=root)
 
 try:
@@ -1480,7 +1480,7 @@ except TypeError:
 try:
     if grafica is not None:
         grafica.communicate(
-            "Ventana plot, creada desde el Emulador PAE!", 0.01)
+            "Ventana plot, creada desde el Emulador!", 0.01)
 except subprocess.TimeoutExpired:
     pass
 
