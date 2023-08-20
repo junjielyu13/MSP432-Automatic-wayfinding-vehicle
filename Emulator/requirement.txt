@@ -1,2 +1,7 @@
 pyserial
 Pmw
+pyserial
+python3-tk
+Pmw
+numpy
+matplotlib

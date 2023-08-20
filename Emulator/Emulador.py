@@ -53,7 +53,7 @@ MAX_SIM_STEPS = 100000  # Nombre màxim de pasos d'una simulació. Es pot editar
 Comando_plot = "plot_movement.py"
 
 SIM_STEP_MS_TIME = 100  # Pas del simulador en ms
-fichero_habitacion = "habitacion_003.h"
+fichero_habitacion = "room.h"
 OUTPUT_FILE_NAME = "movement.log"
 
 # Con "w", reiniciamos el fichero si ya existia
