@@ -22,6 +22,8 @@ Here is an [example](https://ariadnacortesdanes.github.io/StormBraining/).
   - [Install](#install)
   - [Usage](#usage)
     - [Compile and run](#compile-and-run)
+  - [Hardware](#hardware)
+  - [Testing](#testing)
   - [Documentation](#documentation)
   - [Issues](#issues)
   - [License](#license)
@@ -41,6 +43,10 @@ Clone to local directory:
 ## Usage
 
 ### Compile and run
+
+## Hardware
+
+## Testing
 
 ## Documentation
 
