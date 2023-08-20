@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import serial
 import tkinter as tk
 from tkinter import *
@@ -16,60 +18,43 @@ import Pmw
 import platform
 import sys
 
-version = "8.4.5"
 
 root = tk.Tk()
-Pmw.initialise(root)  # initializing it in the root window
-
-# Compatibilidad python windows/Linux:
+Pmw.initialise(root)
 plataforma = platform.system()
-print("Plataforma: ", plataforma)
+print("Platform: ", plataforma)
 Comando_python = sys.executable
-print("Comando python: ", Comando_python)
-print("----------------------------------------")
+print("Python command: ", Comando_python)
 
-#
-# PARÀMETRES QUE ELS USUARIS PODEN EDITAR
 
-# Port USB per defecte:
-if plataforma == "Linux":  # p. ej. Ubuntu y derivados
-    Default_port_com = '/dev/ttyACM0'  # Es pot editar
-elif plataforma == "Darwin":  # mac
-    Default_port_com = '/dev/cu.usbmodemM43210051'  # Es pot editar
+load_dotenv()
+if plataforma == "Linux":
+    Default_port_com = '/dev/ttyACM0'
+elif plataforma == "Darwin":
+    Default_port_com = '/dev/cu.usbmodemM43210051'
 else:  # Windows
-    Default_port_com = 'COM4'  # Es pot editar
+    Default_port_com = os.getenv('PORT')
 
-# Posició inicial del robot: (les unitats de distància es consideren en mm)
-INITIAL_POS_X = 2000  # Es pot editar
-INITIAL_POS_Y = 2000  # Es pot editar
-# Orientació inicial: segons eix Y+. #  Es pot editar
+INITIAL_POS_X = int(os.getenv('INITIAL_POS_X'))
+INITIAL_POS_Y = int(os.getenv('INITIAL_POS_Y'))
 INITIAL_POS_THETA = math.pi / 2
-# Paràmetres de la simulació:
-MAX_SIM_STEPS = 100000  # Nombre màxim de pasos d'una simulació. Es pot editar
+MAX_SIM_STEPS = 100000
+SIM_STEP_MS_TIME = 100
 
-#
-# A partir d'aquest punt, els usuaris no haurien de canviar res.
-#
-Comando_plot = "plot_movement.py"
+Comando_plot = os.getenv('PLOT_FILE')
+fichero_habitacion = os.getenv('ROOM_FILE')
+OUTPUT_FILE_NAME = os.getenv('LOG_FILE')
 
-SIM_STEP_MS_TIME = 100  # Pas del simulador en ms
-fichero_habitacion = "room.h"
-OUTPUT_FILE_NAME = "movement.log"
-
-# Con "w", reiniciamos el fichero si ya existia
 fichero_log = open(OUTPUT_FILE_NAME, "w")
 DEMO = 0
-delay_Simul = 0.001  # en s
-delay_Puerto = 0.001  # en s
-DELTA_T = SIM_STEP_MS_TIME / 1000.0  # convertimos el paso de la simul a s
-# conversion del valor de velocidad del AX12 [0..3FF] a mm/s
+delay_Simul = 0.001
+delay_Puerto = 0.001
+DELTA_T = SIM_STEP_MS_TIME / 1000.0
 CNTS_2_MM = 1000.0 * DELTA_T / 1023
-L_AXIS = 1.0  # distancia entre las ruedas del robot, en mm
+L_AXIS = 1.0
 t_last_upd = 0.0
-ORIENT_L = 1  # Orientacion motor izquierdo
-ORIENT_R = -1  # Orientacion motor derecho
-# V_inicial_demo_L = 0x3FF
-# V_inicial_demo_R = 0x7FF
+ORIENT_L = 1
+ORIENT_R = -1
 V_inicial_demo_L = 0
 V_inicial_demo_R = 0
 
@@ -101,10 +86,10 @@ port_com = Default_port_com
 baud_rate = 115200
 baud_rates = [9600, 19200, 38400, 57600, 115200,
               230400, 460800, 500000, 921600, 1000000]
-timeout = 0.002  # para lectura puerto, en s
+timeout = 0.002
 lectura = 0
 seguir = 1
-ser = serial.Serial()  # Creamos el puerto serie, se configura luego
+ser = serial.Serial()
 
 INSTR_IDLE = 0x00
 INSTR_END = 0xFF
@@ -153,7 +138,6 @@ n_moduls = 3
 ID = 0
 trama = b''
 
-# instruccio = INSTR_IDLE
 simulacio = INSTR_IDLE
 simulando = 0
 actualizar_graf = 0
@@ -237,7 +221,6 @@ def puertos_serie():
 
 def refrescar_puertos(cb_lista: ttk.Combobox):
     global port_com
-    print("Actualizando lista puertos")
     lista_puertos = puertos_serie()
     cb_lista.config(values=lista_puertos)
     indice = 0
@@ -246,7 +229,6 @@ def refrescar_puertos(cb_lista: ttk.Combobox):
             cb_lista.current(indice)
         indice += 1
     port_com = cb_lista.get()
-    print("Puerto seleccionado: ", port_com)
 
 
 def f_led(ID):
@@ -254,11 +236,10 @@ def f_led(ID):
         Led_motor_left.set(AX12[ID - 1][0x19])
     elif ID == MOTOR_ID_R:
         Led_motor_right.set(AX12[ID - 1][0x19])
-    else:  # si no es cap  motor, sortim.
+    else:
         if DEBUG_Consola == 1:
             print("El modul amb ID ", ID, " no poseix cap LED")
         return
-    # Informacio de debug si es tracta d'un motor:
     if DEBUG_Consola == 1:
         if AX12[ID - 1][0x19] == 1:
             print("LED motor", ID, "ON")
@@ -272,7 +253,7 @@ def f_moving_speed(ID):
     if ID != MOTOR_ID_L and ID != MOTOR_ID_R:
         if DEBUG_Consola == 1:
             print("El modul amb ID ", ID, " no es un motor")
-        return  # si no es cap  motor, sortim.
+        return
     velocitat = AX12[ID - 1][0x20] + (AX12[ID - 1][0x21] & 0x03) * 256
     if DEBUG_Consola == 1:
         print("Velocitat  motor", ID, "=", velocitat)
@@ -299,7 +280,7 @@ def f_angle_limit(ID):
     if ID != MOTOR_ID_L and ID != MOTOR_ID_R:
         if DEBUG_Consola == 1:
             print("El modul amb ID ", ID, " no es un motor")
-        return  # si no es cap  motor, sortim directament.
+        return
     cw_angle = AX12[ID - 1][0x06] + (AX12[ID - 1][0x07] & 0x03) * 256
     ccw_angle = AX12[ID - 1][0x08] + (AX12[ID - 1][0x09] & 0x03) * 256
     if DEBUG_Consola == 1:
@@ -407,7 +388,6 @@ def reset_modul_AX12(id_modul):
     return
 
 
-# comprova si hi ha error de checksum a la trama
 def comprova_checksum(frame):
     len_trama = len(frame)
     chk_sum = 0
@@ -415,17 +395,14 @@ def comprova_checksum(frame):
         chk_sum = chk_sum + frame[index]
     chk_sum = chk_sum & 0xFF
     if (chk_sum | frame[len_trama - 1]) == 0xFF:
-        # ser.write(b'\x00')
         if DEBUG_trama:
             print('Checksum correcte')
         return 0x00
     else:
         print('Error de Checksum')
-        # ser.write(b'\x10')
         return 0x10
 
 
-# comprova si hi ha error d'instruccio la trama
 def comprova_instr(instruccio):
     if (instruccio < 0x07) or (instruccio == 0xFF) or (instruccio == INSTR_SYNC_WRT):
         if DEBUG_Consola == 1:
@@ -456,7 +433,6 @@ def send_status_packet(modul_id, error_code):
 
 def generate_read_packet(modul_id, address, num_param):
     global simulando
-    # simulando = 0 #simulacion en pausa, para poner un breakpoint mas adelante antes de reanudar la simulacion
     status_frame = Status_NoError[:]
     status_frame[2] = modul_id
     status_frame[3] = num_param + 2
@@ -473,7 +449,6 @@ def generate_read_packet(modul_id, address, num_param):
         print("status packet in hex:", string)
         print("status packet in dec:", status_frame)
     ser.write(status_frame)
-    # simulando = 1 #para poner un breakpoint antes de reanudar la simulacion
     return
 
 
@@ -487,7 +462,6 @@ def generate_status_packet(id_modul, instruc, code_error, trama):
     return
 
 
-# dona l'estat del robot
 def robot_status():
     global ESTAT_ROBOT
     if DEBUG_Consola == 1:
@@ -502,7 +476,7 @@ def robot_status():
         if DEBUG_Consola == 1:
             print("Robot Parat")
         ESTAT_ROBOT = "Robot Parat"
-    elif sentit_left == sentit_right:  # si motors giren mateix sentit => robot gira
+    elif sentit_left == sentit_right:
         if sentit_left == CW:
             if DEBUG_Consola == 1:
                 print("Robot Gira Esquerra")
@@ -511,7 +485,6 @@ def robot_status():
             if DEBUG_Consola == 1:
                 print("Robot Gira Dreta")
             ESTAT_ROBOT = "Robot Gira Dreta"
-    # si motors giren sentit contrari a mateixa velocitat=> robot va recte
     elif abs(v_left - v_right) < 1:
         if sentit_left == CW:
             if DEBUG_Consola == 1:
@@ -521,7 +494,7 @@ def robot_status():
             if DEBUG_Consola == 1:
                 print("Robot Marxa Endavant")
             ESTAT_ROBOT = "Robot Marxa Endavant"
-    elif v_left > v_right:  # velocitats diferents, motor esquerre mes rapid
+    elif v_left > v_right:
         if sentit_left == CW:
             if DEBUG_Consola == 1:
                 print("Robot Gira Esquerra")
@@ -530,7 +503,7 @@ def robot_status():
             if DEBUG_Consola == 1:
                 print("Robot Gira Dreta")
             ESTAT_ROBOT = "Robot Gira Dreta"
-    elif sentit_left == CW:  # velocitats diferents, motor dret mes rapid
+    elif sentit_left == CW:
         if DEBUG_Consola == 1:
             print("Robot Gira Dreta")
         ESTAT_ROBOT = "Robot Gira Dreta"
@@ -543,15 +516,11 @@ def robot_status():
 
 def print_AX_MemoryMap():
     print("-----------------------------------------------------------------")
-    # print("============= MODUL ============= [", MOTOR_ID_L, "] ====== [", MOTOR_ID_R, "] ====== [", SENSOR_ID, "]")
     print("= @ =|===== FUNCIO ===== MODUL => [", MOTOR_ID_L,
           "] ====== [", MOTOR_ID_R, "] ====== [", SENSOR_ID, "]")
     for i in range(50):
-        # format Hexadecimal
         mot1 = ''.join(['0x%02X ' % (AX12[MOTOR_ID_L - 1][i])])
-        # format Hexadecimal
         mot2 = ''.join(['0x%02X ' % (AX12[MOTOR_ID_R - 1][i])])
-        # format Hexadecimal
         sens = ''.join(['0x%02X ' % (AX12[SENSOR_ID - 1][i])])
         print('0x{:02X} | {:-<24}'.format(i,
               AX12_memory[i]), ">", mot1, "      ", mot2, "      ", sens)
@@ -581,29 +550,24 @@ def print_tipus_Instruccio(instruccio, comandament):
     if DEBUG_Consola == 1:
         if error_de_instr == 0:
             if instruccio == INSTR_ACTION:
-                comandament = 0x2C  # "Registered Instruction"
+                comandament = 0x2C
             print("----------- INSTRUCCIÓ i COMANDAMENT --------------")
             print("Command:", AX12_memory[comandament])
     return error_de_instr
 
 
-# iNICIALITZACIÓ
-# inicialitza els moduls a valors de reset
 AX12 = [[0] * 50 for i in range(n_moduls)]
 reset_modul_AX12(MOTOR_ID_L)
 reset_modul_AX12(MOTOR_ID_R)
 reset_modul_AX12(SENSOR_ID)
-# crea una trama d'status per indicar que no hi ha error
 Status_NoError = [0xff, 0xff, 0x01, 0x02, 0x00, 0xfc]
-
-# aquesta instruccio es no fer res
 instruccio = INSTR_IDLE
-# si esta activat el debug dels moduls presenta el contingut de memoria d'aquests
+
 if DEBUG_Moduls:
     print_AX_MemoryMap()
 
 
-class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
+class Hilo(threading.Thread):
     def __init__(self, nombre, cola, cola_hilo):
         threading.Thread.__init__(self)
         self.cola = cola
@@ -616,11 +580,10 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
         global AX12_moving_L
         global AX12_moving_R
         global lectura
-        Lista_acciones = []  # para almacenar acciones recibidas con REG_WRITE
+        Lista_acciones = []
         AX12_moving_L = "PARAT"
         AX12_moving_R = "PARAT"
         print("Lectura puerto iniciada...", instruccio)
-        # el bucle "infinito" del hilo (hasta recibir INSTR_END)
         while instruccio != INSTR_END:
             if not la_cola.empty():
                 mensaje = la_cola.get()
@@ -634,37 +597,32 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
                 trama = b''
                 if ser.is_open and ser.in_waiting >= 4:
                     inicio_trama = ser.read(4)
-                    # inicio de trama tipo AX12 valido
                     if inicio_trama[0] == 0xFF and inicio_trama[1] == 0xFF:
                         resto_trama = ser.read(inicio_trama[3])
                         trama = b''.join([inicio_trama, resto_trama])
-                    else:  # faltan los FF FF => trama no valida
+                    else:
                         trama = b''
                 if trama != b'':
                     items_array = len(trama)
                     if DEBUG_Consola == 1:
                         print("Número de items en el array:", items_array)
-                    if items_array >= 6:  # en cas contrari no es un instruction packet
+                    if items_array >= 6:
                         if DEBUG_Consola == 1:
                             print("")
                             print(
                                 "****************************************************")
-                        # posicio de la trama on esta la instruccio
                         instruccio = trama[4]
-                        # si esta activat el debug mostra la trama que arriba
+
                         if DEBUG_trama == 1:
                             print_trama()
-                        # mira quina instruccio es i si no es una de les que existeix dona un error
+
                         instr_error = print_tipus_Instruccio(
                             instruccio, trama[5])
-                        # copmprova el checksum rebut amb el calculat
                         chk_sum_error = comprova_checksum(
                             trama[0:trama[3] + 4])
-                        # error indicara si hi ha un error, sigui d'instruccio o de checksum
                         error = (chk_sum_error | instr_error)
-                        # posicio a la trama del identificador del modul
                         ID = trama[2]
-                        if ID != BROADCAST_ID:  # si el ID no es el de broadcast respon amb un status packet
+                        if ID != BROADCAST_ID:
                             generate_status_packet(
                                 ID, instruccio, error, trama)
                         else:
@@ -673,24 +631,21 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
                         if ID not in lista_ID_Modulos:
                             print("Error: la ID ", format(
                                 ID, '#04x'), " no es vàlida")
-                        elif error == 0:  # si no hi ha hagut cap error analitza la instruccio i l'executa
-                            if instruccio == INSTR_WRITE:  # per ara nomes executa la instruccio WRITE
+                        elif error == 0:
+                            if instruccio == INSTR_WRITE:
                                 if ID == BROADCAST_ID:
                                     print("Instrucció ", format(
                                         instruccio, '#04x'), " incompatible amb ID ", format(ID, '#04x'))
                                 else:
                                     n_parametres = trama[3] - 3
-                                    # posicio de la tama on esta l'adreça de memoria del modul a escriure
                                     address = trama[5]
                                     values = trama[6:]
                                     Actualitza_AX_Memory(
                                         ID, address, n_parametres, values)
-                                    # informa quin comandament s'ha executat
                                     AX12_func(address, ID)
                                     if DEBUG_Moduls:
                                         print_AX_MemoryMap()
                                     robot_status()
-                                    # label_trama.set(str(trama)[3:-1])
                                     texto_trama.set(ESTAT_ROBOT)
                                     texto_motor_left.set(AX12_moving_L)
                                     texto_motor_right.set(AX12_moving_R)
@@ -700,7 +655,6 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
                                     print("Instrucció ", format(
                                         instruccio, '#04x'), " incompatible amb ID Broadcast ", format(ID, '#04x'))
                                 else:
-                                    # Ahora, tenemos que ir almacenando las acciones pendientes:
                                     ID = trama[2]
                                     direccion = trama[5]
                                     num_param = trama[3] - 3
@@ -724,10 +678,8 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
                                         num_param = Lista_acciones[index][2]
                                         for param in range(num_param):
                                             parametro = Lista_acciones[index][3][param]
-                                            # Hay que actualizar la memoria del (los) modulo(s):
                                             AX12[ID - 1][direccion +
                                                          param] = parametro
-                                        # informa quin comandament s'ha executat
                                         AX12_func(direccion, ID)
                                     robot_status()
                                     texto_trama.set(ESTAT_ROBOT)
@@ -735,7 +687,6 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
                                     texto_motor_right.set(AX12_moving_R)
                                     if DEBUG_Moduls:
                                         print_AX_MemoryMap()
-                                    # una vez ejecutadas las acciones pendientes, limpiamos la lista:
                                     Lista_acciones = []
                             elif instruccio == INSTR_SYNC_WRT:
                                 if ID != BROADCAST_ID:
@@ -756,28 +707,22 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
                                                    * i: 8+(length+1)*(i+1)]
                                     Actualitza_AX_Memory(
                                         id, address, length, values)
-                                    # informa quin comandament s'ha executat
                                     AX12_func(address, id)
                                 if DEBUG_Moduls:
                                     print_AX_MemoryMap()
                                 robot_status()
-                                # label_trama.set(str(trama)[3:-1])
+
                                 texto_trama.set(ESTAT_ROBOT)
                                 texto_motor_left.set(AX12_moving_L)
                                 texto_motor_right.set(AX12_moving_R)
-                        else:  # Ha habido un error, hay que hacer limpieza:
+                        else:
                             Lista_acciones = []
-                            # ser.flushInput()  # deprecated
                             ser.reset_input_buffer()
-                            # Algo mas??
-            # time.sleep(delay_Puerto)  # para dejar tiempo de procesador al hilo principal
 
-        # Hemos salido del bucle "infinito" del hilo (al recibir INSTR_END)
-        # Informamos a la aplicacion que se finaliza el hilo
         la_cola_hilo.put(INSTR_STOP_THREAD)
         if DEBUG_Consola == 1:
             print("lectura parada")
-        lectura = 0  # creo que esto no es necesario?
+        lectura = 0
 
     def run(self):
         self.leer_puerto(self.cola, self.cola_hilo)
@@ -785,26 +730,27 @@ class Hilo(threading.Thread):  # El thread que ira leyendo del puerto serie
             print("funcion run terminada")
 
 
-# Funciones y definiciones para la simulacion del movimiento
-WORLD__N_BYTES = 4  # 4 bytes
-WORLD__N_BITS = 32  # 32 bits
-WORLD__MAX_2POW = 5  # math.log2(WORLD__N_BYTES * 8)
+WORLD__N_BYTES = 4
+WORLD__N_BITS = 32
+WORLD__MAX_2POW = 5
 
 
 class _habitacion_t:
     def __init__(self, fichero_habitacion):
         print("Datos habitacion:", fichero_habitacion)
-        # Leemos los datos de la habitacion:
         parametros = np.genfromtxt(fichero_habitacion, dtype="int",
                                    delimiter=',', skip_header=2,
                                    max_rows=1, deletechars="\n")
+
+        print(parametros)
+
         self.ancho = parametros.data[0]
         self.alto = parametros.data[1]
         print("Ancho = ", self.ancho, " Alto = ", self.alto)
 
         parametros = np.genfromtxt(fichero_habitacion, delimiter=',', dtype="int",
                                    skip_header=4, max_rows=1, deletechars="\n")
-        # asi, el ndarray (de dim 0) se transforma en int, y evita un warning del compilador!
+
         num_obstaculos = parametros * 1
         print("Hay", num_obstaculos, "obstaculos.")
 
@@ -829,28 +775,25 @@ class _habitacion_t:
 
 habitacion = _habitacion_t(fichero_habitacion)
 X_LEN = (habitacion.ancho >> WORLD__MAX_2POW)
-# cada fila, con un ancho de 4096 puntos, consta de 128 bloques de 32 bits (1 bit = 1 punto)
-
-# X__MAX_2POW = math.log2(X_LEN)
 
 
 class _robot_pos_t:
     def __init__(self, INITIAL_POS_X, INITIAL_POS_Y, theta, mundo):
-        self.x = INITIAL_POS_X  # integer position of midpoint between wheels
-        self.y = INITIAL_POS_Y  # integer position of midpoint between wheels
-        self.l_axis = L_AXIS  # distance between wheels
-        self.theta = theta  # orientation of midpoint between wheels
-        self.iv_l = 0  # integer left wheel linear velocity
-        self.iv_r = 0  # integer right wheel linear velocity
-        self.v_l = 0.0  # float left wheel linear velocity
-        self.v_r = 0.0  # float right wheel linear velocity
-        self.r = 0.0  # signed distance from ICC to midpoint between wheels
-        self.w = 0.0  # rate of rotation of robot body about the ICC
-        self.icc_x = 0.0  # Instantaneous Center of Curvature (ICC)
-        self.icc_y = 0.0  # Instantaneous Center of Curvature (ICC)
-        self.x_p = 0.0  # float position of midpoint between wheels
+        self.x = INITIAL_POS_X
+        self.y = INITIAL_POS_Y
+        self.l_axis = L_AXIS
+        self.theta = theta
+        self.iv_l = 0
+        self.iv_r = 0
+        self.v_l = 0.0
+        self.v_r = 0.0
+        self.r = 0.0
+        self.w = 0.0
+        self.icc_x = 0.0
+        self.icc_y = 0.0
+        self.x_p = 0.0
         self.x_p = self.x
-        self.y_p = 0.0  # float position of midpoint between wheels
+        self.y_p = 0.0
         self.y_p = self.y
         self.sim_step = 0
         self.world = mundo
@@ -863,13 +806,8 @@ print("Robot en (", robot_pos_str.x, ",",
 
 
 def obstaculo(x, y, robot_pos: _robot_pos_t):
-    # Parametros: uint16_t x, uint16_t y, const uint32_t *mundo
     mundo = robot_pos.world
-    # Los datos se han cargado como un array[4096, 128] => [y, x]
-    # y es la fila [0..4095]
-    # x es la columna: bit n de 0..31, dentro de uno de los 0..127 bloques de una fila
-    # En que bloque se encuentra x?
-    p_offset = x >> WORLD__MAX_2POW  # INT(x/32)
+    p_offset = x >> WORLD__MAX_2POW
     p_bit = (WORLD__N_BITS - 1) - (x - (p_offset << WORLD__MAX_2POW))
 
     if mundo[y, p_offset] & (1 << p_bit):
@@ -878,13 +816,11 @@ def obstaculo(x, y, robot_pos: _robot_pos_t):
 
 
 def sensor_distance(x0, y0, theta, robot_pos: _robot_pos_t):
-    modulo = 0.0  # modulo del vector de desplazamiento en la direccion de un sensor
+    modulo = 0.0
     x = 0.0
-    y = 0.0  # componentes del vector de desplazamiento en la direccion de un sensor
-    indice = 0  # Distancia al obstaculo
-    u8_mod = 0  # modulo redondeado, a 8 bits
-
-    # incrementos del vector de desplazamiento en la direccion de un sensor:
+    y = 0.0
+    indice = 0
+    u8_mod = 0
     dx = math.cos(theta)
     dy = math.sin(theta)
 
@@ -903,39 +839,22 @@ def sensor_distance(x0, y0, theta, robot_pos: _robot_pos_t):
 
 
 def distance(robot_pos: _robot_pos_t):
-    # Parametros: _robot_pos_t *robot_pos, uint8_t *izq, uint8_t *centro, uint8_t *der
-    # x0 = 0 #posicion del bloque de sensores
-    # y0 = 0 #posicion del bloque de sensores
-    # theta = 0.0 #orientacion del sensor central
-    # theta_l = 0.0; theta_r = 0.0 #Orientacion de los sensores izquierdo y derecho
-
-    x0 = robot_pos.x  # posicion del bloque de sensores = Posicion del robot
-    y0 = robot_pos.y  # posicion del bloque de sensores = Posicion del robot
-    theta = robot_pos.theta  # orientacion del sensor central, paralela a la del robot
-    # /*
-    #     theta_l = theta - M_PI / 2; //<-- Error: esto iria en sentido contrario
-    #     theta_r = theta + M_PI / 2; //al trigonometrico, que se utiliza en todo el resto!
-    # */
-    # Angulos en sentido trigonometrico correcto:
+    x0 = robot_pos.x
+    y0 = robot_pos.y
+    theta = robot_pos.theta
     theta_r = theta - math.pi / 2
     theta_l = theta + math.pi / 2
 
-    # Sensor central:
     centro = sensor_distance(x0, y0, theta, robot_pos)
-
-    # Sensor izquierda:
     izq = sensor_distance(x0, y0, theta_l, robot_pos)
-
-    # Sensor derecha
     der = sensor_distance(x0, y0, theta_r, robot_pos)
 
     return izq, centro, der
 
 
 def elapsed_time(t1, milliseconds):
-    # Parametros: clock_t t1, uint32_t miliseconds, int32_t *true_elapsed_time
     t2 = time.time()
-    true_elapsed_time = (t2 - t1) * 1000  # para tenerlo en ms
+    true_elapsed_time = (t2 - t1) * 1000
     if true_elapsed_time > milliseconds:
         return True, true_elapsed_time
     else:
@@ -950,7 +869,6 @@ def check_colision(robot_pos: _robot_pos_t):
     return False
 
 
-# /** Verify we are not getting outside of the room
 def check_out_of_bounds(ANCHO, ALTO):
     if robot_pos_str.x > ANCHO - 1 or robot_pos_str.y > ALTO - 1 or robot_pos_str.x < 0 or robot_pos_str.y < 0:
         print("***** WARNING, LEAVING ROOM... \n")
@@ -958,7 +876,6 @@ def check_out_of_bounds(ANCHO, ALTO):
     return False
 
 
-# /** Check if the maximum simulation time has been reached
 def check_simulation_end():
     if MAX_SIM_STEPS != 0 and robot_pos_str.sim_step >= MAX_SIM_STEPS:
         print("***** SIMULATION END REACHED. STOPPING SIMULATOR\n")
@@ -966,22 +883,11 @@ def check_simulation_end():
     return False
 
 
-# /** Simulation clean-up
 def end_simulator():
-    # simulator_finished = true;
-    # fclose(fichero);
-    # // pthread_exit(NULL);
-    # }
     return
 
 
-# ** Reads from the dynamixel memory the speed of a endless turning wheel
-#  *
-#  * @param v Pointer were the signed speed is stored
-#  * @param motor_id ID of the Dynamixel module
-#  */
 def _speed_dyn_2_speed_int(motor_id):
-    # Parametros: int16_t *v, uint8_t motor_id
     v = AX12[motor_id - 1][DYN_REG__GOAL_SPEED_L]
     v |= ((AX12[motor_id - 1][DYN_REG__GOAL_SPEED_H] & 0x03) << 8)
     if AX12[motor_id - 1][DYN_REG__GOAL_SPEED_H] & 0x04:
@@ -989,16 +895,13 @@ def _speed_dyn_2_speed_int(motor_id):
     return v
 
 
-# /** Read the speed of the dynamixel modules and store them inside the position structure
 def read_speed(robot_pos_str: _robot_pos_t):
     robot_pos_str.iv_l = _speed_dyn_2_speed_int(MOTOR_ID_L) * ORIENT_L
     robot_pos_str.iv_r = _speed_dyn_2_speed_int(MOTOR_ID_R) * ORIENT_R
     return
 
 
-# /** Update the position and orientation of the robot using two wheel differential drive kinematics
 def calculate_new_position(robot_pos_str: _robot_pos_t):
-    # // http://www.cs.columbia.edu/~allen/F15/NOTES/icckinematics.pdf
     read_speed(robot_pos_str)
     robot_pos_str.v_l = CNTS_2_MM * robot_pos_str.iv_l
     robot_pos_str.v_r = CNTS_2_MM * robot_pos_str.iv_r
@@ -1009,48 +912,39 @@ def calculate_new_position(robot_pos_str: _robot_pos_t):
         robot_pos_str.y_p += robot_pos_str.v_r * \
             DELTA_T * math.sin(robot_pos_str.theta)
     else:
-        # signed distance "r" from ICC (Instantaneous Center of Curvature) to midpoint between wheels:
-        # (axes positive oriented left to right)
         robot_pos_str.r = (robot_pos_str.l_axis / 2) * (robot_pos_str.v_l + robot_pos_str.v_r) \
             / (robot_pos_str.v_r - robot_pos_str.v_l)
-        # rate of rotation w about the ICC:
         robot_pos_str.w = (robot_pos_str.v_r -
                            robot_pos_str.v_l) / robot_pos_str.l_axis
-        # New ICC position (x,y), with respect to previous
-        # midpoint between wheels (x_p, y_p) and orientation (theta):
         robot_pos_str.icc_x = robot_pos_str.x_p \
             - robot_pos_str.r * math.sin(robot_pos_str.theta)
         robot_pos_str.icc_y = robot_pos_str.y_p \
             + robot_pos_str.r * math.cos(robot_pos_str.theta)
-        # New midpoint between wheels (floats x_p, y_p):
         robot_pos_str.x_p = math.cos(robot_pos_str.w * DELTA_T) * (robot_pos_str.x_p - robot_pos_str.icc_x) \
             - math.sin(robot_pos_str.w * DELTA_T) * (robot_pos_str.y_p - robot_pos_str.icc_y) \
             + robot_pos_str.icc_x
         robot_pos_str.y_p = math.sin(robot_pos_str.w * DELTA_T) * (robot_pos_str.x_p - robot_pos_str.icc_x) \
             + math.cos(robot_pos_str.w * DELTA_T) * (robot_pos_str.y_p - robot_pos_str.icc_y) \
             + robot_pos_str.icc_y
-        # New robot orientation (theta):
+
         robot_pos_str.theta += robot_pos_str.w * DELTA_T
         if robot_pos_str.theta < -math.pi:
             robot_pos_str.theta += 2 * math.pi
         elif robot_pos_str.theta > math.pi:
             robot_pos_str.theta -= 2 * math.pi
-    # Convert new midpoint between wheels to integers (x, y):
+
     robot_pos_str.x = round(robot_pos_str.x_p)
     robot_pos_str.y = round(robot_pos_str.y_p)
 
     return
 
 
-# /** Update the sensor data taking into account the new position
 def update_sensor_data(robot_pos: _robot_pos_t):
     distancia_left, distancia_center, distancia_right = distance(robot_pos)
-    # Actualizamos la memoria de los modulos: (duplicando los sensores de un modulo al otro)
-    AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT] = distancia_left  # Left IR
-    AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR] = distancia_center  # Center IR
-    AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT] = distancia_right  # Right IR
+    AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT] = distancia_left
+    AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR] = distancia_center
+    AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT] = distancia_right
 
-    # Added obstacle detection flag. If bigger than 0, it is enabled.
     if DYN_REG__OBS_DETECT_VALUE > 0:
         right_flag = (distancia_right > DYN_REG__OBS_DETECT_VALUE) << 2
         center_flag = (distancia_center > DYN_REG__OBS_DETECT_VALUE) << 1
@@ -1061,20 +955,19 @@ def update_sensor_data(robot_pos: _robot_pos_t):
 
 
 def calcular_distancias_demo():
-    # Demo, moviendo las barras con distancias ficticias
     distancia_left = AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT]
     distancia_right = AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT]
     distancia_center = AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR]
     creciendo = AX12[SENSOR_ID - 1][0x1D]
-    # Sensor izquierdo:
+
     if distancia_left < 1:
         distancia_left = 256
     distancia_left -= 1
-    # sensor derecho:
+
     if distancia_right > 255:
         distancia_right = 0
     distancia_right += 1
-    # Sensor centro:
+
     if creciendo:
         if distancia_center < 255:
             distancia_center += 1
@@ -1086,21 +979,18 @@ def calcular_distancias_demo():
         else:
             creciendo = 1
     AX12[SENSOR_ID - 1][0x1D] = creciendo
-    # Actualizamos la memoria de los modulos: (duplicando los sensores de un modulo al otro)
-    AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT] = distancia_left  # Left IR
-    AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR] = distancia_center  # Center IR
-    AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT] = distancia_right  # Right IR
-    # fin de la demo
+    AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT] = distancia_left
+    AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR] = distancia_center
+    AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT] = distancia_right
 
 
-# /** Update, if required, the position and sensor information
 def update_movement_simulator_values():
     global t_last_upd, simulando, fichero_log
     objective_delay = SIM_STEP_MS_TIME
     elapsed, true_elapsed_time = elapsed_time(t_last_upd, objective_delay)
     if DEMO:
         calcular_distancias_demo()
-        return False  # False pq no hay que actualizar nada desde el hilo
+        return False
     if elapsed:
         objective_delay -= (true_elapsed_time - SIM_STEP_MS_TIME)
         t_last_upd = time.time()
@@ -1108,29 +998,23 @@ def update_movement_simulator_values():
         if MAX_SIM_STEPS != 0 and robot_pos_str.sim_step >= MAX_SIM_STEPS:
             print("***** SIMULATION END REACHED. STOPPING SIMULATOR\n")
             simulando = 0
-            return False  # False pq ya no conviene actualizar nada desde el hilo
+            return False
         calculate_new_position(robot_pos_str)
         if not check_out_of_bounds(habitacion.ancho, habitacion.alto):
             update_sensor_data(robot_pos_str)
             if check_colision(robot_pos_str):
-                return False  # False pq no conviene actualizar nada desde el hilo
-            # Mandamos las nuevas coordenadas al socket de la ventana grafica:
+                return False
             conn.send("%.2f, %.2f\n" % (robot_pos_str.x_p, robot_pos_str.y_p))
-            # Si esta activada la grabacion, escribimos los datos al fichero de salida:
+
             if SIMUL_Save:
-                # with open() as fichero_log:
                 if fichero_log.closed:
                     fichero_log = open(OUTPUT_FILE_NAME, "a")
                 fichero_log.write("%.2f, %.2f, %.3f, %.2f, %.2f\n" % (robot_pos_str.x_p, robot_pos_str.y_p,
                                                                       robot_pos_str.theta, robot_pos_str.v_l,
                                                                       robot_pos_str.v_r))
-            return True  # True pq hay que actualizar mas cosas desde el hilo
-    # #if DEBUG_LEVEL > 2
-    #         check_simulation_end();
-    # #endif
-    #     }
-    # }
-    return False  # False pq no hay que actualizar nada desde el hilo
+            return True
+
+    return False
 
 
 def reset_robot_pos(robot_pos: _robot_pos_t):
@@ -1169,10 +1053,7 @@ class Simul(threading.Thread):
         AX12[MOTOR_ID_R - 1][DYN_REG__GOAL_SPEED_L] = V_inicial_demo_R & 0xFF
         AX12[MOTOR_ID_R -
              1][DYN_REG__GOAL_SPEED_H] = (V_inicial_demo_R >> 8) & 0x07
-        # # Actualizamos las barras graficas:
-        # valor_barra_izq.set(AX12[0][DYN_REG__IR_LEFT])
-        # valor_barra_der.set(AX12[0][DYN_REG__IR_RIGHT])
-        # valor_barra_cent.set(AX12[0][DYN_REG__CENTER_IR_SENSOR])
+
         t_anterior = 0
         t0 = 0
         while simulacio != INSTR_STOP_SIMUL:
@@ -1189,14 +1070,11 @@ class Simul(threading.Thread):
                     valor_barra_der.set(AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT])
                     valor_barra_cent.set(
                         AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR])
-                # else:
-                # en principio, no hacer nada?...
-            # para dejar tiempo de procesador al hilo principal
             time.sleep(delay_Simul)
-        # la_cola_simul.put(INSTR_STOP_SIMUL)
+
         if DEBUG_Consola == 1:
             print("simulacion parada")
-        simulando = 0  # creo que esto no es necesario?
+        simulando = 0
         simulacio = INSTR_SIMUL_ENDED
 
     def run(self):
@@ -1205,7 +1083,6 @@ class Simul(threading.Thread):
             print("funcion run terminada")
 
 
-# Funciones para gestionar la aplicacion grafica
 class Application(tk.Frame):
     counter = 0
     contador = 0
@@ -1255,8 +1132,6 @@ class Application(tk.Frame):
         self.Print_Memoria_AX = Button(
             self, text="Imprimir Memoria Mòduls", fg="blue", command=self.imprimir_AX_memory)
         self.Print_Memoria_AX.grid(row=2, column=2, columnspan=2, sticky=W)
-        # self.Print_IR = Button(self, text="Valors IR", fg="blue", command=self.imprimir_IR)
-        # self.Print_IR.grid(row=2, column=3, sticky=W)
 
         self.Label_Simul = Label(self, text="SIMULACIO:")
         self.Label_Simul.grid(row=3, column=1, sticky=W)
@@ -1348,15 +1223,9 @@ class Application(tk.Frame):
         self.label_valor_centro = Label(self, textvariable=valor_barra_cent)
         self.label_valor_centro.grid(row=9, column=5, sticky=W)
 
-        self.quit = tk.Button(self, text="SORTIR", fg="red",
-                              command=self.salir)
-        self.quit.grid(row=21, column=3)
-
-        # self.hi_there = tk.Button(self)
-        # self.hi_there["text"] = "About"
-        # self.hi_there["fg"] = "blue"
-        # self.hi_there["command"] = self.say_hi
-        # self.hi_there.grid(row=21, column=4, sticky=W)
+        self.quit = tk.Button(self, text="SORTIR",
+                              fg="red", command=self.salir)
+        self.quit.grid(row=21, column=4)
 
         self.cb = ttk.Combobox(self, values=lista_puertos, width=10)
         self.cb.current(0)
@@ -1371,7 +1240,7 @@ class Application(tk.Frame):
         print("Puerto seleccionado: ", port_com)
 
         self.cb_rate = ttk.Combobox(self, state="readonly", width=12,
-                                    values=baud_rates)  # desplegable con velocidades de bps estandares
+                                    values=baud_rates)
         self.cb_rate.current(4)
         self.cb_rate.grid(row=21, column=2)
         self.cb_rate.bind('<<ComboboxSelected>>', self.on_select_rate)
@@ -1382,80 +1251,57 @@ class Application(tk.Frame):
             self, command=lambda: refrescar_puertos(self.cb))
         self.refrescar["text"] = "Refrescar"
         self.refrescar["fg"] = "blue"
-        self.refrescar.grid(row=22, column=1, sticky=W)
-
-        # self.logo_frame = Label(text=" ")
-        # self.logo_frame.grid(row=30, column=0, columnspan=4, pady=10)
-        # try:
-        #     self.logo = PhotoImage(file="img/logoUB.png")
-        #     self.logo_frame["image"] = self.logo
-        # except tk.TclError:
-        #     self.logo_frame["text"] = "Universitat de Barcelona"
-        #     return
+        self.refrescar.grid(row=21, column=3, sticky=W)
 
     def set_tooltips(self):
-        self.tooltip_Debug_frame = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_Debug_frame = Pmw.Balloon(root)
         self.tooltip_Debug_frame.bind(self.Debug_frame,
-                                      'Activa/Desactiva impressió a consola de la trama rebuda \ni de la resposta enviada (Status Packet)')  # binding it and assigning a text to it
+                                      'Activa/Desactiva impressió a consola de la trama rebuda \ni de la resposta enviada (Status Packet)')
 
-        self.tooltip_Debug_module = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_Debug_module = Pmw.Balloon(root)
         self.tooltip_Debug_module.bind(self.Debug_module,
-                                       'Activa/Desactiva impressió a consola del mapa de memòria dels mòduls \nAX12 (motors) i AX-S1 (sensors) al rebre una comanda vàlida')  # binding it and assigning a text to it
+                                       'Activa/Desactiva impressió a consola del mapa de memòria dels mòduls \nAX12 (motors) i AX-S1 (sensors) al rebre una comanda vàlida')
 
-        self.tooltip_Debug_consola = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_Debug_consola = Pmw.Balloon(root)
         self.tooltip_Debug_consola.bind(self.Debug_consola,
-                                        'Activa/Desactiva impressió a consola de \nmissatges addicional dels estats del robot')  # binding it and assigning a text to it
+                                        'Activa/Desactiva impressió a consola de \nmissatges addicional dels estats del robot')
 
-        self.tooltip_Print_Memoria_AX = Pmw.Balloon(
-            root)  # Calling the tooltip
+        self.tooltip_Print_Memoria_AX = Pmw.Balloon(root)
         self.tooltip_Print_Memoria_AX.bind(self.Print_Memoria_AX,
-                                           'Imprimir a la consola el mapa de memòria \ndels mòduls AX12 (motors) i AX-S1 (sensors)')  # binding it and assigning a text to it
+                                           'Imprimir a la consola el mapa de memòria \ndels mòduls AX12 (motors) i AX-S1 (sensors)')
 
-        self.tooltip_Simul_On_Off = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_Simul_On_Off = Pmw.Balloon(root)
         self.tooltip_Simul_On_Off.bind(self.Simul_On_Off,
-                                       'Iniciar/Pausar la simulació')  # binding it and assigning a text to it
+                                       'Iniciar/Pausar la simulació')
 
-        self.tooltip_Simul_grabar = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_Simul_grabar = Pmw.Balloon(root)
         el_tip = "Activa/Desactiva l’emmagatzematge al fitxer \"" + \
             OUTPUT_FILE_NAME + "\" \nde les dades que es van simulant"
-        # binding it and assigning a text to it
         self.tooltip_Simul_grabar.bind(self.Simul_grabar, el_tip)
 
-        self.tooltip_Simul_reset = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_Simul_reset = Pmw.Balloon(root)
         el_tip = "Reinicia tots els paràmetres de la simulació, tant l’estat del robot \n" \
                  "com la seva posició, així com el fitxer de dades. \n" \
                  "El robot s’atura, i es torna a ficar a la posició inicial definida per defecte, \n" \
                  "descartant tots els punts simulats fins ara. \n" \
                  "El fitxer de dades es buida."
-        # binding it and assigning a text to it
         self.tooltip_Simul_reset.bind(self.Simul_reset, el_tip)
 
-        self.tooltip_cb = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_cb = Pmw.Balloon(root)
         el_tip = "Selecciona el port USB on es troba la UART de  l’MSP"
-        # binding it and assigning a text to it
         self.tooltip_cb.bind(self.cb, el_tip)
 
-        self.tooltip_cb_rate = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_cb_rate = Pmw.Balloon(root)
         el_tip = "Configura la velocitat de bits (baud rate) en bps, \nper adequar-se a la que s’hagi programat a l’MSP"
-        # binding it and assigning a text to it
         self.tooltip_cb_rate.bind(self.cb_rate, el_tip)
 
-        self.tooltip_refrescar = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_refrescar = Pmw.Balloon(root)
         el_tip = "Torna a buscar els ports disponibles"
-        # binding it and assigning a text to it
         self.tooltip_refrescar.bind(self.refrescar, el_tip)
 
-    # self.refrescar.grid(row=22, column=1, sticky=W)
-
-        self.tooltip_quit = Pmw.Balloon(root)  # Calling the tooltip
+        self.tooltip_quit = Pmw.Balloon(root)
         el_tip = "surt de l’emulador, tancant totes les finestres, i terminant tots els fils i processos. \n(Nota: la creueta de la part superior dreta de la finestra no surt de forma neta)"
-        # binding it and assigning a text to it
         self.tooltip_quit.bind(self.quit, el_tip)
-
-        # self.tooltip_hi_there = Pmw.Balloon(root)  # Calling the tooltip
-        # el_tip = "Informació dels autors"
-        # # binding it and assigning a text to it
-        # self.tooltip_hi_there.bind(self.hi_there, el_tip)
 
     def on_select(self, event=None):
         global lectura
@@ -1490,7 +1336,6 @@ class Application(tk.Frame):
         print("UB, 2020-2021.")
         print("versió", version)
         mensaje = "J. Bosch & C. Serre\nUB, 2020-2021.\nVer. " + version
-        # messagebox.showinfo("Autors", "J. Bosch & C. Serre\nUB, 2020-2021.\nVer. ")
         messagebox.showinfo("Autors", mensaje)
 
     def set_debug_frames(self):
@@ -1521,42 +1366,36 @@ class Application(tk.Frame):
 
     def grabar_Simul_OnOff(self):
         global SIMUL_Save, fichero_log
-        # si el fichero se ha cerrado (p.ej. con el boton "reset")
         if fichero_log.closed:
-            # "w", para reiniciar el fichero si ya existia
             fichero_log = open(OUTPUT_FILE_NAME, "w")
         SIMUL_Save = SIMUL_Save_check.get()
         return
 
     def crear_hilo(self):
-        # crear cola para comunicar/enviar tareas al thread
         self.cola = queue.Queue()
         self.cola_hilo = queue.Queue()
         if DEBUG_Consola == 1:
             print(self.cola, self.cola_hilo)
-        # crear el thread
+
         hilo = Hilo("puerto", self.cola, self.cola_hilo)
-        # iniciar thread
         hilo.start()
 
     def crear_simul(self):
-        # crear cola para comunicar/enviar tareas al thread
         self.cola_simul = queue.Queue()
         if DEBUG_Consola == 1:
             print(self.cola, self.cola_simul)
-        # crear el thread
+
         simul = Simul("Simul", self.cola, self.cola_simul)
         update_sensor_data(robot_pos_str)
         print("Robot @:", robot_pos_str.x, robot_pos_str.y)
         print("Distancia: Izq.=", AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT],
               ", Centro =", AX12[SENSOR_ID - 1][DYN_REG__IR_CENTER],
               ", Der. =", AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT])
-        # Actualizamos las barras graficas:
+
         valor_barra_izq.set(AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT])
         valor_barra_der.set(AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT])
         valor_barra_cent.set(AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR])
 
-        # iniciar thread
         simul.start()
 
     def reset_simul(self):
@@ -1565,7 +1404,7 @@ class Application(tk.Frame):
         print("Simulacio reiniciada")
         SIMUL_check.set(0)
         self.set_Simul_On_Off()
-        # reiniciar el robot
+
         reset_modul_AX12(MOTOR_ID_R)
         reset_modul_AX12(MOTOR_ID_L)
         reset_robot_pos(robot_pos_str)
@@ -1577,7 +1416,7 @@ class Application(tk.Frame):
         texto_trama.set(ESTAT_ROBOT)
         texto_motor_left.set(AX12_moving_L)
         texto_motor_right.set(AX12_moving_R)
-        # Actualizamos las barras graficas:
+
         valor_barra_izq.set(AX12[SENSOR_ID - 1][DYN_REG__IR_LEFT])
         valor_barra_der.set(AX12[SENSOR_ID - 1][DYN_REG__IR_RIGHT])
         valor_barra_cent.set(AX12[SENSOR_ID - 1][DYN_REG__CENTER_IR_SENSOR])
@@ -1587,15 +1426,13 @@ class Application(tk.Frame):
 
     def check_queue(self):
         global instruccio, simulacio, simulando
-        # revisar la cola para evitar bloque en la interfaz
         if not self.cola_hilo.empty():
-            # obtener mensaje de la cola
             instruccio = self.cola_hilo.get()
             if DEBUG_Consola == 1:
                 print("get text from read queue:", instruccio)
         if instruccio == INSTR_STOP_THREAD:
-            simulando = 0  # parar la simulacion
-            simulacio = INSTR_STOP_SIMUL  # terminar el hilo de la simulacion
+            simulando = 0
+            simulacio = INSTR_STOP_SIMUL
             return INSTR_STOP_THREAD
         if not self.cola_simul.empty():
             mensaje = self.cola_simul.get()
@@ -1603,12 +1440,12 @@ class Application(tk.Frame):
         root.after(100, self.check_queue)
 
     def salir(self):
-        self.cola.put(INSTR_END)  # terminar funcion leer_puerto
+        self.cola.put(INSTR_END)
         if (instruccio == INSTR_STOP_THREAD) & (simulacio == INSTR_SIMUL_ENDED):
-            conn.send('close')  # Cerramos la ventana del plot
+            conn.send('close')
             if DEBUG_Consola == 1:
                 print("Hilos finalizados")
-            self.master.destroy()  # Termina la aplicacion
+            self.master.destroy()
         else:
             root.after(200, self.salir)
 
@@ -1616,7 +1453,7 @@ class Application(tk.Frame):
 lista_puertos = puertos_serie()
 root.title("EMULADOR ROBOT PAE")
 app = Application(master=root)
-# inicialitza el port serie
+
 try:
     if ser.is_open:
         ser.close()
@@ -1630,7 +1467,7 @@ except serial.SerialException as e:
     mensaje = "No se puede abrir el puerto\n\t" + port_com
     messagebox.showerror("Error COM", mensaje)
     print("No se puede abrir el puerto", port_com, ", error ", e)
-# Iniciamos un segundo proceso independiente, para la ventana del plot:
+
 grafica = None
 try:
     grafica = subprocess.Popen(
@@ -1663,23 +1500,17 @@ while not connected:
         n_retries += 1
         time.sleep(0.1)
 
-# can also send arbitrary objects:
+
 if conn is not None:
     conn.send("conexion mediante un socket!")
-# conn.send("%.2f, %.2f\n" % (INITIAL_POS_X, INITIAL_POS_Y))  # Ploteamos la posicion inicial del robot
 
-# Traer la ventana de control al primer plano:
 root.lift()
 root.after(1, lambda: root.lift())
 root.after(2, lambda: root.focus_force())
-# ...esto no acaba de funcionar, se me pone la ventana del plot delante al plotear la posicion inicial del robot...
 
-# bucle principal de la aplicacion:
+
 app.mainloop()
 
-# Finalizada la aplicacion, hacemos limpieza:
 ser.close()
 grafica.terminate()
 conn.close()
-# fichero_log.close()
-print("Aplicacion terminada.")
