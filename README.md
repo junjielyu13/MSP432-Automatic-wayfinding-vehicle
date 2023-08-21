@@ -8,7 +8,9 @@ An automatic wayfinding vehicle developed using MSP432
 
 <div align="center">
 
-![weq]()
+![cover](./public/projectfinal_video.gif)
+![cover](./public/MSP432.jpg)
+![cover](./public/boostxl-edumkii_SPL.webp)
 
 </div>
 
@@ -47,6 +49,8 @@ Clone to local directory:
 ## Hardware
 
 ## Testing
+
+![video](public/projectfinal_video.mp4)
 
 ## Documentation
 
