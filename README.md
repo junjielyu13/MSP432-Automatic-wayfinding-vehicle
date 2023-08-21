@@ -12,7 +12,6 @@ An automatic wayfinding vehicle developed using MSP432P401
 
 </div>
 
-
 ## Table of Contents
 
 - [ MSP432 Automatic Wayfinding Vehicle](#-msp432-automatic-wayfinding-vehicle)
@@ -47,7 +46,7 @@ Any hardware needed can be purchased online.
 
 Clone to local directory:
 
-`$ git clone https://github.com/SoftwareDistribuitUB-2023/practica-1-p1_f01.git`
+`$ git clone https://github.com/junjielyu13/MSP432-Automatic-wayfinding-vehicle.git`
 
 ## Usage
 
@@ -59,7 +58,7 @@ Clone to local directory:
 
 ### Emulator
 
-More information and tutorials on [here](./Emulator/README.md).
+More information and tutorial on [here](./Emulator/README.md).
 
 ## Hardware
 
