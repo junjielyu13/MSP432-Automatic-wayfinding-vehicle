@@ -21,7 +21,7 @@ Next, we will go on to explain each of these windows in detail.
 
 <div align="center">
 
-![emulator](./assets/emulator.png)
+![emulator](./public/emulator.png)
 
 </div>
 
@@ -73,7 +73,7 @@ Real-time visualization of the robot's path inside the room with its walls and t
 
 <div align="center">
 
-![plot](./assets/plot.png)
+![plot](./public/plot.png)
 
 </div>
 
